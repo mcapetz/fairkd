@@ -1,5 +1,7 @@
 <!-- #region -->
-# Graph-less Neural Networks (GLNN)
+# Fair Knowledge Distillation
+
+## Graph-less Neural Networks (GLNN)
 
 Code for [Graph-less Neural Networks: Teaching Old MLPs New Tricks via Distillation](https://arxiv.org/pdf/2110.08727.pdf) by [Shichang Zhang](https://shichangzh.github.io/), [Yozen Liu](https://research.snap.com/team/yozen-liu/), [Yizhou Sun](http://web.cs.ucla.edu/~yzsun/), and [Neil Shah](http://nshah.net/).
 
@@ -138,4 +140,6 @@ If you find our work useful, please cite the following:
 Please open an issue or contact `shichang@cs.ucla.edu` if you have any questions.
 
 <!-- #endregion -->
-# fairkd
+
+
+
