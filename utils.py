@@ -14,6 +14,11 @@ CPF_data = ["cora", "citeseer", "pubmed", "a-computer", "a-photo"]
 OGB_data = ["ogbn-arxiv", "ogbn-products"]
 NonHom_data = ["pokec", "penn94"]
 BGNN_data = ["house_class", "vk_class"]
+Nifty_data = ["German", "Credit"]
+Say_no_data = ["Pokec-z", "Pokec-n", "NBA"]
+Synthetic_data = ["syn-1", "syn-2"]
+Twitter_data = ["sport", "occupation"]
+SBM = ["sbm0.0","sbm0.1","sbm0.2","sbm0.3","sbm0.4","sbm0.5","sbm0.05", "sbm0.25", "sbm0.50", "sbm0.75", "sbm1.00"]
 
 
 def set_seed(seed):
@@ -27,6 +32,7 @@ def set_seed(seed):
 
 
 def get_training_config(config_path, model_name, dataset):
+#     print("in get_Training_config")
     with open(config_path, "r") as conf:
         full_config = yaml.load(conf, Loader=yaml.FullLoader)
     dataset_specific_config = full_config["global"]
@@ -38,6 +44,7 @@ def get_training_config(config_path, model_name, dataset):
         specific_config = dataset_specific_config
 
     specific_config["model_name"] = model_name
+#     print("specific config: ", specific_config)
     return specific_config
 
 

@@ -167,9 +167,9 @@ class GCN(nn.Module):
         self.norms = nn.ModuleList()
 
         if num_layers == 1:
-            self.layers.append(GraphConv(input_dim, output_dim, activation=activation))
+            self.layers.append(GraphConv(input_dim, output_dim, activation=activation, allow_zero_in_degree=True))
         else:
-            self.layers.append(GraphConv(input_dim, hidden_dim, activation=activation))
+            self.layers.append(GraphConv(input_dim, hidden_dim, activation=activation, allow_zero_in_degree=True))
             if self.norm_type == "batch":
                 self.norms.append(nn.BatchNorm1d(hidden_dim))
             elif self.norm_type == "layer":
@@ -177,14 +177,14 @@ class GCN(nn.Module):
 
             for i in range(num_layers - 2):
                 self.layers.append(
-                    GraphConv(hidden_dim, hidden_dim, activation=activation)
+                    GraphConv(hidden_dim, hidden_dim, activation=activation, allow_zero_in_degree=True)
                 )
                 if self.norm_type == "batch":
                     self.norms.append(nn.BatchNorm1d(hidden_dim))
                 elif self.norm_type == "layer":
                     self.norms.append(nn.LayerNorm(hidden_dim))
 
-            self.layers.append(GraphConv(hidden_dim, output_dim))
+            self.layers.append(GraphConv(hidden_dim, output_dim, allow_zero_in_degree=True))
 
     def forward(self, g, feats):
         h = feats
