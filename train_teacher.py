@@ -342,6 +342,7 @@ def run(args):
     # Subset for test set
     test_labels = labels[idx_test]
     test_sens = sens[idx_test]
+    test_samples = len(idx_test)
 
     # Group sizes
     s0 = test_sens == 0
@@ -362,7 +363,9 @@ def run(args):
     # 1. Assert class balance
     class_1_ratio = float(total_y1) / total_samples
     expected_class_1 = float(class_weights[-3:])
-    assert abs(class_1_ratio - expected_class_1) < 0.05, f"Class 1 ratio {class_1_ratio:.2f} doesn't match expected {expected_class_1:.2f}"
+    std_error_class = math.sqrt(expected_class_1 * (1-expected_class_1) / test_samples)
+    threshold_class = 3 * std_error_class
+    assert abs(class_1_ratio - expected_class_1) < threshold_class, f"Class 1 ratio {class_1_ratio:.2f} doesn't match expected {expected_class_1:.2f}"
 
     # 2. Assert group balance
     s1_ratio = float(s1.sum()) / total_samples
@@ -370,7 +373,9 @@ def run(args):
         expected_group_0 = 1-float(args.dataset[-3:]) # p depends on the name of the dataset
     else:
         expected_group_0 = 0.8 # default for p when varying q
-    assert abs(s1_ratio - expected_group_0) < 0.05, f"Group balance {s1_ratio:.2f} doesn't match expected {expected_group_0:.2f}"
+    std_error_group = math.sqrt(expected_group_0 * (1-expected_group_0) / test_samples)
+    threshold_group = 3 * std_error_group
+    assert abs(s1_ratio - expected_group_0) < threshold_group, f"Group balance {s1_ratio:.2f} doesn't match expected {expected_group_0:.2f} since it is not within threshold {threshold_group:.2f}"
 
     """ Checking if edge probabilities are correct """
     src_nodes, tgt_nodes = g.edges(order='eid')
