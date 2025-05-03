@@ -479,9 +479,9 @@ def run(args):
     if len(args.dataset) == 6:
         p_or_q = "p"
         
-    np.save(f'saved_arrays/overall_cm_student_{args.dataset}_{args.seed}_c={class_weights}_{p_or_q}.npy', overall_cm, allow_pickle=True)
-    np.save(f'saved_arrays/group_0_cm_student_{args.dataset}_{args.seed}_c={class_weights}_{p_or_q}.npy', group_0_cm, allow_pickle=True)
-    np.save(f'saved_arrays/group_1_cm_student_{args.dataset}_{args.seed}_c={class_weights}_{p_or_q}.npy', group_1_cm, allow_pickle=True)    
+    np.save(f'saved_arrays/overall_cm_student_{args.dataset}_{args.seed}_c={class_weights}.npy', overall_cm, allow_pickle=True)
+    np.save(f'saved_arrays/group_0_cm_student_{args.dataset}_{args.seed}_c={class_weights}.npy', group_0_cm, allow_pickle=True)
+    np.save(f'saved_arrays/group_1_cm_student_{args.dataset}_{args.seed}_c={class_weights}.npy', group_1_cm, allow_pickle=True)    
     
     """ Calculating AUC """
     # out_np is the logits array, use softmax to get probabilities
@@ -548,8 +548,8 @@ def run(args):
     macro_roc_auc_ovr_diff = macro_roc_auc_ovr_0 - macro_roc_auc_ovr_1
 
     print(f"auc diff: {macro_roc_auc_ovr_diff}")
-    np.save(f'saved_arrays/auc_ovr_diff_student_{args.dataset}_{args.seed}_c={class_weights}_{p_or_q}.npy', macro_roc_auc_ovr_diff, allow_pickle=True)
-    np.save(f'saved_arrays/auc_ovr_overall_student_{args.dataset}_{args.seed}_c={class_weights}_{p_or_q}.npy', macro_roc_auc_ovr, allow_pickle=True)
+    np.save(f'saved_arrays/auc_ovr_diff_student_{args.dataset}_{args.seed}_c={class_weights}.npy', macro_roc_auc_ovr_diff, allow_pickle=True)
+    np.save(f'saved_arrays/auc_ovr_overall_student_{args.dataset}_{args.seed}_c={class_weights}.npy', macro_roc_auc_ovr, allow_pickle=True)
 
     """ Saving loss curve and model """
     if args.save_results:
@@ -568,7 +568,7 @@ def run(args):
 
     score = score_lst
     score_str = "".join([f"{s : .4f}\t" for s in score])
-    np.save(f'saved_arrays/acc_student_{args.dataset}_{args.seed}_c={class_weights}_{p_or_q}.npy', float(score_str), allow_pickle=True)
+    np.save(f'saved_arrays/acc_student_{args.dataset}_{args.seed}_c={class_weights}.npy', float(score_str), allow_pickle=True)
 
     return score_lst
 
@@ -605,7 +605,7 @@ def main():
     if len(args.dataset) == 6:
         p_or_q = "p"
         
-    np.save(f'saved_arrays/acc_student_{args.dataset}_{args.seed}_c={class_weights}_{p_or_q}.npy', float(score_str), allow_pickle=True)
+    np.save(f'saved_arrays/acc_student_{args.dataset}_{args.seed}_c={class_weights}.npy', float(score_str), allow_pickle=True)
 
 
 if __name__ == "__main__":

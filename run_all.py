@@ -13,7 +13,7 @@ def seed_everything(seed: int):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
     
-seed_everything(42)
+seed_everything(16)
 # -
 
 from os import environ
@@ -38,23 +38,13 @@ for i in range(num_runs):
     
         for dataset in datasets:
             # Construct the filename
-            filename = f"acc_teacher_{dataset}_{i}_c={class_weights}_p.npy"
+            filename = f"acc_teacher_{dataset}_{i}_c={class_weights}.npy"
             file_path = os.path.join("saved_arrays", filename)
             
             # check if it is already done
             if os.path.exists(file_path): 
                 print("\t", dataset, class_weights, "already done")
                 continue
-            
-            # check if it has already failed - delete this later after fixing error tolerance
-            already_failed = False
-            if os.path.exists("error_log.txt"):
-                with open("error_log.txt", "r") as f:
-                    for line in f:
-                        if line.startswith(f"{dataset}_{class_weights}_num_failures:"):
-                            already_failed = True
-                            print("\t", dataset, class_weights, "already failed")
-                            continue
             
             print("\t", "dataset: ", dataset)
             print("\t", "teacher")
@@ -69,8 +59,8 @@ for i in range(num_runs):
                 
                 # Check if the line already exists
                 already_logged = False
-                if os.path.exists("error_log.txt"):
-                    with open("error_log.txt", "r") as f:
+                if os.path.exists("error_log_1.txt"):
+                    with open("error_log_1.txt", "r") as f:
                         for line in f:
                             if line.startswith(f"{dataset}_{class_weights}_num_failures:"):
                                 already_logged = True
@@ -78,8 +68,9 @@ for i in range(num_runs):
 
                 # Only write if not already logged
                 if not already_logged:
-                    with open("error_log.txt", "a") as f:
+                    with open("error_log_1.txt", "a") as f:
                         f.write(entry_line)
+                        f.write(f"{e.stdout}\n{e.stderr}")
                         
                 continue # skip student if teacher fails
             
@@ -95,8 +86,8 @@ for i in range(num_runs):
                 
                 # Check if the line already exists
                 already_logged = False
-                if os.path.exists("error_log.txt"):
-                    with open("error_log.txt", "r") as f:
+                if os.path.exists("error_log_1.txt"):
+                    with open("error_log_1.txt", "r") as f:
                         for line in f:
                             if line.startswith(f"{dataset}_{class_weights}_num_failures:"):
                                 already_logged = True
@@ -104,6 +95,7 @@ for i in range(num_runs):
 
                 # Only write if not already logged
                 if not already_logged:
-                    with open("error_log.txt", "a") as f:
+                    with open("error_log_1.txt", "a") as f:
                         f.write(entry_line)
+                        f.write(f"{e.stdout}\n{e.stderr}")
 
