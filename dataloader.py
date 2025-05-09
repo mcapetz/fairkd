@@ -322,7 +322,7 @@ from torch_geometric.utils import stochastic_blockmodel_graph
 
 class CustomSBMDataset(StochasticBlockModelDataset):
     
-    def __init__(self, *args, class_weights=None, p=0.2, q=0.25, num_nodes=1000, **kwargs):
+    def __init__(self, *args, class_weights=None, p=0.2, q=0.25, num_nodes=3000, **kwargs):
         self.class_weights = class_weights if class_weights is not None else [0.1, 0.9]
         self.p = p  # group weights
         self.q = q  # edge probability ratio
@@ -412,8 +412,8 @@ class CustomSBMDataset(StochasticBlockModelDataset):
             start_idx = end_idx
 
         # Generate features
-        sig_core = 0.5  # Covariance, constant for preliminary experimentation, can vary it later
-        sig_spu = 0.5
+        sig_core = 10  # Covariance, constant for preliminary experimentation, can vary it later
+        sig_spu = 1
         d = 100  # Number of core features
         num_channels = 2 * d
 
@@ -426,15 +426,27 @@ class CustomSBMDataset(StochasticBlockModelDataset):
                 # Modify core features based on class (y)
                 mask = (class_labels == y) & (group_labels == a)
                 if y == 0:
-                    x[mask, :d] = sig_core * x[mask, :d] - 1 # y=0 data centered at -1
+                    x[mask, :d] = sig_core * x[mask, :d] - 1 # y=0 data centered at -0.05
                 else:
-                    x[mask, :d] = sig_core * x[mask, :d] + 1 # y=1 data centered at -1
+                    x[mask, :d] = sig_core * x[mask, :d] + 1 # y=1 data centered at +0.05
 
                 # Modify spurious features based on group (a)
                 if a == 0:
-                    x[mask, d:] = sig_spu * x[mask, d:] - 1 # a=0 data centered at -1
+                    x[mask, d:] = sig_spu * x[mask, d:] - 1 # a=0 data centered at -0.05
                 else:
-                    x[mask, d:] = sig_spu * x[mask, d:] + 1 # a=1 data centered at -1
+                    x[mask, d:] = sig_spu * x[mask, d:] + 1 # a=1 data centered at +0.05
+                    
+        from sklearn.decomposition import PCA
+        x_ = x.tolist()
+        x_ = np.array(x_)
+        class_labels_ = class_labels.tolist()
+        class_labels_ = np.array(class_labels_)
+        
+        pca = PCA()
+        Xt = pca.fit_transform(x_)
+        plot = plt.scatter(Xt[:,0], Xt[:,1], c=class_labels_)
+        plt.savefig(f'data_distribution.png')
+        plt.close()
 
         # Create the final data object
         data = Data(x=x, edge_index=edge_index, y=class_labels, group=group_labels)
@@ -543,18 +555,13 @@ def load_sbm(dataset):
     print("q (edge prob ratio):",q)
     print("p (group balance):",p)
     
-    num_channels = 2
+    num_channels = 200
     class_weights = [float(class_weights_val[:3]),float(class_weights_val[4:])] # vary this for experimentation
-    num_nodes = 1000
+    num_nodes = 3000
     
     # Set up dataset name and path
     dataset_name = f"sbm_p{p}_q{q}_class{class_weights_val}_nodes{num_nodes}_channels{num_channels}"
     dataset_path = os.path.join('./data/sbm', dataset_name)
-
-    # Remove any old version of the dataset if it exists, we want a fresh graph each time
-    if os.path.exists(dataset_path):
-        print(f"Removing old dataset directory: {dataset_path}")
-        shutil.rmtree(dataset_path)
 
     # Create the dataset
     dataset = CustomSBMDataset(
