@@ -458,16 +458,27 @@ def run(args):
     
     """ Calculating traditional fairness metrics """
     # calculate and output demographic parity and equal opportunity (original fairness metrics)
+    dp_0 = pred[idx_test][sens[idx_test] == 0].mean()
+    dp_1 = pred[idx_test][sens[idx_test] == 1].mean()
+    eo_0 = pred[idx_test][(sens[idx_test] == 0) & (labels[idx_test] == 1)].mean()
+    eo_1 = pred[idx_test][(sens[idx_test] == 1) & (labels[idx_test] == 1)].mean()
     print("dp 0: ", pred[idx_test][sens[idx_test] == 0].mean())
     print("dp 1: ", pred[idx_test][sens[idx_test] == 1].mean())
     print("eo 0: ", pred[idx_test][(sens[idx_test] == 0) & (labels[idx_test] == 1)].mean())
     print("eo 1: ", pred[idx_test][(sens[idx_test] == 1) & (labels[idx_test] == 1)].mean())
-    # demographic parity calculation
+    
     dp = abs(pred[idx_test][sens[idx_test] == 0].mean() - pred[idx_test][sens[idx_test] == 1].mean())
     print("dp: ", dp)
-    # equal opportunity calculation
     eo = abs(pred[idx_test][(sens[idx_test] == 0) & (labels[idx_test] == 1)].mean() - pred[idx_test][(sens[idx_test] == 1) & (labels[idx_test] == 1)].mean())
     print("eo: ", eo)
+    
+    print("acc:", (pred[idx_test] == labels[idx_test]).mean()) # overall accuracy
+    print("acc diff:", ((pred[idx_test][(sens[idx_test] == 0)] == labels[idx_test][(sens[idx_test] == 0)]).mean()) - (pred[idx_test][(sens[idx_test] == 1)] == labels[idx_test][(sens[idx_test] == 1)]).mean())
+    acc_diff = ((pred[idx_test][(sens[idx_test] == 0)] == labels[idx_test][(sens[idx_test] == 0)]).mean()) - (pred[idx_test][(sens[idx_test] == 1)] == labels[idx_test][(sens[idx_test] == 1)]).mean()
+    
+    trad_metrics = [dp_0, dp_1, eo_0, eo_1, dp, eo, acc_diff]
+    
+    np.save(f'saved_arrays/trad_metrics_student_{args.dataset}_{args.seed}_c={class_weights}.npy', trad_metrics, allow_pickle=True)
     
     """ Calculating confusion matrices """
     overall_cm = confusion_matrix(labels[idx_test], pred[idx_test])
