@@ -288,7 +288,7 @@ def create_heatmaps(datasets, x_label):
 
 
 def create_line_plots(datasets, x_label):
-    diff_vmin, diff_vmax = global_limits['diff']
+    auc_ts_vmin, auc_ts_vmax = global_limits['auc_ts']
     
     # Define colors for different class weights
     colors = plt.cm.viridis(np.linspace(0, 1, len(class_weights_list)))
@@ -330,7 +330,7 @@ def create_line_plots(datasets, x_label):
                          np.array(avg_student) + np.array(std_student)/np.sqrt(len(seeds)),
                          color=colors[i], alpha=0.1)
 
-    plt.ylim(diff_vmin, diff_vmax)
+    plt.ylim(auc_ts_vmin, auc_ts_vmax)
     plt.title('Group 0-1 AUC Comparison vs '+ x_label)
     plt.xlabel(x_label)
     plt.ylabel('Group 0-1 AUC')
@@ -344,7 +344,7 @@ def create_line_plots(datasets, x_label):
 
 # +
 def create_teacher_plot(datasets, x_label):
-    auc_vmin, auc_vmax = global_limits['auc']
+    auc_ts_vmin, auc_ts_vmax = global_limits['auc_ts']
     # Define colors for different class weights
     colors = plt.cm.viridis(np.linspace(0, 1, len(class_weights_list)))
     # Plot Group 0-1 AUC Comparison for Teacher only as line plots
@@ -369,7 +369,7 @@ def create_teacher_plot(datasets, x_label):
                          np.array(avg_teacher) + np.array(std_teacher)/np.sqrt(len(seeds)),
                          color=colors[i], alpha=0.2)
     
-    plt.ylim(auc_vmin, auc_vmax)
+    plt.ylim(auc_ts_vmin, auc_ts_vmax)
     plt.title('Teacher Model: Group 0-1 AUC Comparison vs ' + x_label)
     plt.xlabel(x_label)
     plt.ylabel('Group 0-1 AUC')
@@ -381,7 +381,7 @@ def create_teacher_plot(datasets, x_label):
     plt.close()
 
 def create_student_plot(datasets, x_label):
-    auc_vmin, auc_vmax = global_limits['auc']
+    auc_ts_vmin, auc_ts_vmax = global_limits['auc_ts']
     # Define colors for different class weights
     colors = plt.cm.viridis(np.linspace(0, 1, len(class_weights_list)))
     # Plot Group 0-1 AUC Comparison for Student only as line plots
@@ -395,7 +395,7 @@ def create_student_plot(datasets, x_label):
         std_student = [auc_diffs[dataset][class_weights]['std_student'] for dataset in datasets]
         
         # Plot student line with different style
-        plt.plot(x_positions, avg_student, '-s', 
+        plt.plot(x_positions, avg_student, '--s', 
                  label=f'Student {class_weights}',
                  color=colors[i], 
                  linewidth=2,
@@ -406,7 +406,7 @@ def create_student_plot(datasets, x_label):
                          np.array(avg_student) + np.array(std_student)/np.sqrt(len(seeds)),
                          color=colors[i], alpha=0.2)
     
-    plt.ylim(auc_vmin, auc_vmax)
+    plt.ylim(auc_ts_vmin, auc_ts_vmax)
     plt.title('Student Model: Group 0-1 AUC Comparison vs ' + x_label)
     plt.xlabel(x_label)
     plt.ylabel('Group 0-1 AUC')
@@ -427,6 +427,8 @@ def find_global_min_max(datasets_list):
     global_max_auc = float('-inf')
     global_min_acc = float('inf')
     global_max_acc = float('-inf')
+    global_min_auc_teacher_student = float('inf')
+    global_max_auc_teacher_student = float('-inf')
     
     for datasets_type in datasets_list:
         for dataset in datasets_type:
@@ -436,11 +438,19 @@ def find_global_min_max(datasets_list):
                 global_min_diff = min(global_min_diff, diff_val)
                 global_max_diff = max(global_max_diff, diff_val)
                 
-                # For AUC values
+                # For overall AUC values
                 auc_val = auc_diffs[dataset][class_weight]['avg_aucs']
                 global_min_auc = min(global_min_auc, auc_val)
                 global_max_auc = max(global_max_auc, auc_val)
                 
+                # For teacher/student AUC values
+                avg_teacher = auc_diffs[dataset][class_weight]['avg_teacher']
+                avg_student = auc_diffs[dataset][class_weight]['avg_student']
+
+                # Update global min and max
+                global_min_auc_teacher_student = min(global_min_auc_teacher_student, avg_teacher, avg_student)
+                global_max_auc_teacher_student = max(global_max_auc_teacher_student, avg_teacher, avg_student)
+
                 # For Accuracy values
                 acc_val = auc_diffs[dataset][class_weight]['avg_accs']
                 global_min_acc = min(global_min_acc, acc_val)
@@ -450,11 +460,14 @@ def find_global_min_max(datasets_list):
     padding_diff = (global_max_diff - global_min_diff) * 0.05
     padding_auc = (global_max_auc - global_min_auc) * 0.05
     padding_acc = (global_max_acc - global_min_acc) * 0.05
+    padding_auc_ts = (global_max_auc_teacher_student - global_min_auc_teacher_student) * 0.05
     
     return {
         'diff': (global_min_diff - padding_diff, global_max_diff + padding_diff),
         'auc': (global_min_auc - padding_auc, global_max_auc + padding_auc),
-        'acc': (global_min_acc - padding_acc, global_max_acc + padding_acc)
+        'acc': (global_min_acc - padding_acc, global_max_acc + padding_acc),
+        'auc_ts': (global_min_auc_teacher_student - padding_auc_ts, global_max_auc_teacher_student + padding_auc_ts)
+        
     }
 
 # Calculate global limits before creating any plots
