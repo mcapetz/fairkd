@@ -38,13 +38,15 @@ for i in range(num_runs):
     
         for dataset in datasets:
             # Construct the filename
-            filename = f"acc_teacher_{dataset}_{i}_c={class_weights}.npy"
+            filename = f"auc_ovr_diff_student_{dataset}_{i}_c={class_weights}.npy"
             file_path = os.path.join("saved_arrays", filename)
             
             # check if it is already done
             if os.path.exists(file_path): 
-                print("\t", dataset, class_weights, "already done")
+                print("\t", dataset, class_weights, file_path, "already done")
                 continue
+            else:
+                print("not done")
             
             print("\t", "dataset: ", dataset)
             print("\t", "teacher")
