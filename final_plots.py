@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.colors import LinearSegmentedColormap
 import pandas as pd
+from matplotlib import cm
+from matplotlib.colors import TwoSlopeNorm
 
 datasets_p = ["0.1", "0.2", "0.3", "0.4", "0.5"] # these are the p values
 datasets_q = ["0.05", "0.25", "0.50", "0.75", "1.00"] # these are the p values
@@ -16,9 +18,12 @@ min_diff = float('inf')
 
 max_auc = float('-inf')
 min_auc = float('inf')
-# -
 
 auc_diffs = dict()
+# -
+
+figs_folder = "figs_final_new"
+saved_arrays_folder = "saved_arrays"
 
 # load in the auc values
 for dataset in datasets:  
@@ -35,12 +40,12 @@ for dataset in datasets:
 
         # avg and std for seeds
         for seed in seeds: 
-            teacher_val = np.load(f'saved_arrays/auc_ovr_diff_teacher_sbm{dataset}_{seed}_c={class_weights}.npy')
-            student_val = np.load(f'saved_arrays/auc_ovr_diff_student_sbm{dataset}_{seed}_c={class_weights}.npy')
-            teacher_auc = np.load(f'saved_arrays/auc_ovr_overall_teacher_sbm{dataset}_{seed}_c={class_weights}.npy')
-            student_auc = np.load(f'saved_arrays/auc_ovr_overall_student_sbm{dataset}_{seed}_c={class_weights}.npy')
-            teacher_acc = np.load(f'saved_arrays/acc_teacher_sbm{dataset}_{seed}_c={class_weights}.npy')
-            student_acc = np.load(f'saved_arrays/acc_student_sbm{dataset}_{seed}_c={class_weights}.npy')
+            teacher_val = np.load(f'{saved_arrays_folder}/auc_ovr_diff_teacher_sbm{dataset}_{seed}_c={class_weights}.npy')
+            student_val = np.load(f'{saved_arrays_folder}/auc_ovr_diff_student_sbm{dataset}_{seed}_c={class_weights}.npy')
+            teacher_auc = np.load(f'{saved_arrays_folder}/auc_ovr_overall_teacher_sbm{dataset}_{seed}_c={class_weights}.npy')
+            student_auc = np.load(f'{saved_arrays_folder}/auc_ovr_overall_student_sbm{dataset}_{seed}_c={class_weights}.npy')
+            teacher_acc = np.load(f'{saved_arrays_folder}/acc_teacher_sbm{dataset}_{seed}_c={class_weights}.npy')
+            student_acc = np.load(f'{saved_arrays_folder}/acc_student_sbm{dataset}_{seed}_c={class_weights}.npy')
             diff = teacher_val - student_val
             auc = teacher_auc-student_auc
             acc = teacher_acc-student_acc
@@ -110,7 +115,7 @@ def create_bar_plots(datasets, x_label):
     plt.xticks(index, datasets)
     plt.legend(loc='best', bbox_to_anchor=(1, 1))
     plt.tight_layout()
-    plt.savefig(f'figs_final/group_0_1_auc_diff_vs_{x_label[-2:-1]}_all_weights.png')
+    plt.savefig(f'{figs_folder}/group_0_1_auc_diff_vs_{x_label[-2:-1]}_all_weights.png')
     plt.close()
 
     # 2. Plot Group 0-1 AUC Comparison for Teacher and Student
@@ -143,7 +148,7 @@ def create_bar_plots(datasets, x_label):
     plt.xticks(index, datasets)
     plt.legend(loc='best', bbox_to_anchor=(1, 1))
     plt.tight_layout()
-    plt.savefig(f'figs_final/group_0_1_auc_comparison_vs_{x_label[-2:-1]}_all_weights.png')
+    plt.savefig(f'{figs_folder}/group_0_1_auc_comparison_vs_{x_label[-2:-1]}_all_weights.png')
     plt.close()
 
     # 3. Plot Overall AUC Difference
@@ -167,7 +172,7 @@ def create_bar_plots(datasets, x_label):
     plt.xticks(index, datasets)
     plt.legend(loc='best', bbox_to_anchor=(1, 1))
     plt.tight_layout()
-    plt.savefig(f'figs_final/overall_auc_diff_vs_{x_label[-2:-1]}_all_weights.png')
+    plt.savefig(f'{figs_folder}/overall_auc_diff_vs_{x_label[-2:-1]}_all_weights.png')
     plt.close()
 
     # 4. Plot Overall Accuracy Difference
@@ -191,7 +196,7 @@ def create_bar_plots(datasets, x_label):
     plt.xticks(index, datasets)
     plt.legend(loc='best', bbox_to_anchor=(1, 1))
     plt.tight_layout()
-    plt.savefig(f'figs_final/overall_acc_diff_vs_{x_label[-2:-1]}_all_weights.png')
+    plt.savefig(f'{figs_folder}/overall_acc_diff_vs_{x_label[-2:-1]}_all_weights.png')
     plt.close()
 
 
@@ -207,10 +212,13 @@ def create_heatmaps(datasets, x_label):
             group_diff_matrix[i, j] = auc_diffs[p_val][class_weight]['avg_diff']
             overall_auc_matrix[i, j] = auc_diffs[p_val][class_weight]['avg_aucs']
             overall_acc_matrix[i, j] = auc_diffs[p_val][class_weight]['avg_accs']
+
+    cmap_div = cm.get_cmap("RdBu_r")
     
-    # Custom diverging colormap centered at zero
-    colors = ["darkblue", "royalblue", "white", "lightcoral", "darkred"]
-    cmap_div = LinearSegmentedColormap.from_list("custom_div", colors, N=256)
+    # Use consistent min/max for colorbar in all heatmaps
+    diff_vmin, diff_vmax = global_limits['diff']
+    auc_vmin, auc_vmax = global_limits['auc']
+    acc_vmin, acc_vmax = global_limits['acc']
     
     # 1. Heatmap for Group 0-1 AUC Difference
     plt.figure(figsize=(10, 8))
@@ -223,13 +231,15 @@ def create_heatmaps(datasets, x_label):
         linewidths=.5,
         xticklabels=datasets,
         yticklabels=class_weights_list,
-        cbar_kws={'label': 'AUC Difference (Teacher-Student)'}
+        cbar_kws={'label': 'AUC Difference (Teacher-Student)'},
+        vmin=diff_vmin,  # Set consistent limits
+        vmax=diff_vmax
     )
     plt.title('Group 0-1 AUC Difference by Class Weight and '+ x_label, fontsize=14)
     plt.xlabel(x_label, fontsize=12)
     plt.ylabel('Class Weights', fontsize=12)
     plt.tight_layout()
-    plt.savefig(f'figs_final/group_0_1_auc_diff_{x_label[-2:-1]}_heatmap.png')
+    plt.savefig(f'{figs_folder}/group_0_1_auc_diff_{x_label[-2:-1]}_heatmap.png')
     plt.close()
     
     # 2. Heatmap for Overall AUC Difference
@@ -238,18 +248,20 @@ def create_heatmaps(datasets, x_label):
         overall_auc_matrix,
         annot=True,
         fmt=".3f",
-        cmap="coolwarm",
+        cmap=cmap_div,
         center=0,
         linewidths=.5,
         xticklabels=datasets,
         yticklabels=class_weights_list,
-        cbar_kws={'label': 'Overall AUC Difference'}
+        cbar_kws={'label': 'Overall AUC Difference'},
+        vmin=auc_vmin,  # Set consistent limits
+        vmax=auc_vmax
     )
     plt.title('Overall AUC Difference by Class Weight and '+ x_label, fontsize=14)
     plt.xlabel(x_label, fontsize=12)
     plt.ylabel('Class Weights', fontsize=12)
     plt.tight_layout()
-    plt.savefig(f'figs_final/overall_auc_diff_{x_label[-2:-1]}_heatmap.png')
+    plt.savefig(f'{figs_folder}/overall_auc_diff_{x_label[-2:-1]}_heatmap.png')
     plt.close()
     
     # 3. Heatmap for Overall Accuracy Difference
@@ -258,22 +270,26 @@ def create_heatmaps(datasets, x_label):
         overall_acc_matrix,
         annot=True,
         fmt=".3f",
-        cmap="coolwarm",
+        cmap=cmap_div,
         center=0,
         linewidths=.5,
         xticklabels=datasets,
         yticklabels=class_weights_list,
-        cbar_kws={'label': 'Overall Accuracy Difference'}
+        cbar_kws={'label': 'Overall Accuracy Difference'},
+        vmin=acc_vmin,  # Set consistent limits
+        vmax=acc_vmax
     )
     plt.title('Overall Accuracy Difference by Class Weight and '+ x_label, fontsize=14)
     plt.xlabel(x_label, fontsize=12)
     plt.ylabel('Class Weights', fontsize=12)
     plt.tight_layout()
-    plt.savefig(f'figs_final/overall_acc_diff_{x_label[-2:-1]}_heatmap.png')
+    plt.savefig(f'{figs_folder}/overall_acc_diff_{x_label[-2:-1]}_heatmap.png')
     plt.close()
 
 
 def create_line_plots(datasets, x_label):
+    diff_vmin, diff_vmax = global_limits['diff']
+    
     # Define colors for different class weights
     colors = plt.cm.viridis(np.linspace(0, 1, len(class_weights_list)))
 
@@ -314,6 +330,7 @@ def create_line_plots(datasets, x_label):
                          np.array(avg_student) + np.array(std_student)/np.sqrt(len(seeds)),
                          color=colors[i], alpha=0.1)
 
+    plt.ylim(diff_vmin, diff_vmax)
     plt.title('Group 0-1 AUC Comparison vs '+ x_label)
     plt.xlabel(x_label)
     plt.ylabel('Group 0-1 AUC')
@@ -321,12 +338,13 @@ def create_line_plots(datasets, x_label):
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend(loc='best', bbox_to_anchor=(1, 1))
     plt.tight_layout()
-    plt.savefig(f'figs_final/group_0_1_auc_comparison_vs_{x_label[-2:-1]}_line.png')
+    plt.savefig(f'{figs_folder}/group_0_1_auc_comparison_vs_{x_label[-2:-1]}_line.png')
     plt.close()
 
 
 # +
 def create_teacher_plot(datasets, x_label):
+    auc_vmin, auc_vmax = global_limits['auc']
     # Define colors for different class weights
     colors = plt.cm.viridis(np.linspace(0, 1, len(class_weights_list)))
     # Plot Group 0-1 AUC Comparison for Teacher only as line plots
@@ -351,6 +369,7 @@ def create_teacher_plot(datasets, x_label):
                          np.array(avg_teacher) + np.array(std_teacher)/np.sqrt(len(seeds)),
                          color=colors[i], alpha=0.2)
     
+    plt.ylim(auc_vmin, auc_vmax)
     plt.title('Teacher Model: Group 0-1 AUC Comparison vs ' + x_label)
     plt.xlabel(x_label)
     plt.ylabel('Group 0-1 AUC')
@@ -358,10 +377,11 @@ def create_teacher_plot(datasets, x_label):
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend(loc='best', bbox_to_anchor=(1, 1))
     plt.tight_layout()
-    plt.savefig(f'figs_final/teacher_group_0_1_auc_comparison_vs_{x_label[-2:-1]}_line.png')
+    plt.savefig(f'{figs_folder}/teacher_group_0_1_auc_comparison_vs_{x_label[-2:-1]}_line.png')
     plt.close()
 
 def create_student_plot(datasets, x_label):
+    auc_vmin, auc_vmax = global_limits['auc']
     # Define colors for different class weights
     colors = plt.cm.viridis(np.linspace(0, 1, len(class_weights_list)))
     # Plot Group 0-1 AUC Comparison for Student only as line plots
@@ -386,6 +406,7 @@ def create_student_plot(datasets, x_label):
                          np.array(avg_student) + np.array(std_student)/np.sqrt(len(seeds)),
                          color=colors[i], alpha=0.2)
     
+    plt.ylim(auc_vmin, auc_vmax)
     plt.title('Student Model: Group 0-1 AUC Comparison vs ' + x_label)
     plt.xlabel(x_label)
     plt.ylabel('Group 0-1 AUC')
@@ -393,10 +414,51 @@ def create_student_plot(datasets, x_label):
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend(loc='best', bbox_to_anchor=(1, 1))
     plt.tight_layout()
-    plt.savefig(f'figs_final/student_group_0_1_auc_comparison_vs_{x_label[-2:-1]}_line.png')
+    plt.savefig(f'{figs_folder}/student_group_0_1_auc_comparison_vs_{x_label[-2:-1]}_line.png')
     plt.close()
 
 
+# +
+# First, determine global min and max values across all datasets
+def find_global_min_max(datasets_list):
+    global_min_diff = float('inf')
+    global_max_diff = float('-inf')
+    global_min_auc = float('inf')
+    global_max_auc = float('-inf')
+    global_min_acc = float('inf')
+    global_max_acc = float('-inf')
+    
+    for datasets_type in datasets_list:
+        for dataset in datasets_type:
+            for class_weight in class_weights_list:
+                # For group differences
+                diff_val = auc_diffs[dataset][class_weight]['avg_diff']
+                global_min_diff = min(global_min_diff, diff_val)
+                global_max_diff = max(global_max_diff, diff_val)
+                
+                # For AUC values
+                auc_val = auc_diffs[dataset][class_weight]['avg_aucs']
+                global_min_auc = min(global_min_auc, auc_val)
+                global_max_auc = max(global_max_auc, auc_val)
+                
+                # For Accuracy values
+                acc_val = auc_diffs[dataset][class_weight]['avg_accs']
+                global_min_acc = min(global_min_acc, acc_val)
+                global_max_acc = max(global_max_acc, acc_val)
+    
+    # Add some padding to the limits (e.g., 5%)
+    padding_diff = (global_max_diff - global_min_diff) * 0.05
+    padding_auc = (global_max_auc - global_min_auc) * 0.05
+    padding_acc = (global_max_acc - global_min_acc) * 0.05
+    
+    return {
+        'diff': (global_min_diff - padding_diff, global_max_diff + padding_diff),
+        'auc': (global_min_auc - padding_auc, global_max_auc + padding_auc),
+        'acc': (global_min_acc - padding_acc, global_max_acc + padding_acc)
+    }
+
+# Calculate global limits before creating any plots
+global_limits = find_global_min_max([datasets_p, datasets_q])
 # -
 
 for (dataset, x_label) in [(datasets_p, 'Group Balance (p)'),(datasets_q, 'Edge probability Ratio (q)')]:
