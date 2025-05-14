@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn as sns
+from matplotlib.colors import TwoSlopeNorm
 
 datasets_p = ["0.1", "0.2", "0.3", "0.4", "0.5"] # these are the p values
 datasets_q = ["0.05", "0.25", "0.50", "0.75", "1.00"] # these are the p values
@@ -32,12 +33,12 @@ for dataset in datasets:
 
         # avg and std for seeds
         for seed in seeds: 
-            teacher_auc_diff = abs(np.load(f'{saved_arrays_folder}/auc_ovr_diff_teacher_sbm{dataset}_{seed}_c={class_weights}.npy'))
-            student_auc_diff = abs(np.load(f'{saved_arrays_folder}/auc_ovr_diff_student_sbm{dataset}_{seed}_c={class_weights}.npy'))
+            teacher_auc_diff = np.load(f'{saved_arrays_folder}/auc_ovr_diff_teacher_sbm{dataset}_{seed}_c={class_weights}.npy')
+            student_auc_diff = np.load(f'{saved_arrays_folder}/auc_ovr_diff_student_sbm{dataset}_{seed}_c={class_weights}.npy')
             auc_diff = teacher_auc_diff - student_auc_diff
             
-            dp_0, dp_1, eo_0, eo_1, dp, eo, teacher_acc_diff = abs(np.load(f'{saved_arrays_folder}/trad_metrics_teacher_sbm{dataset}_{seed}_c={class_weights}.npy'))
-            dp_0_, dp_1_, eo_0_, eo_1_, dp_, eo_, student_acc_diff = abs(np.load(f'{saved_arrays_folder}/trad_metrics_student_sbm{dataset}_{seed}_c={class_weights}.npy'))
+            dp_0, dp_1, eo_0, eo_1, dp, eo, teacher_acc_diff = np.load(f'{saved_arrays_folder}/trad_metrics_teacher_sbm{dataset}_{seed}_c={class_weights}.npy')
+            dp_0_, dp_1_, eo_0_, eo_1_, dp_, eo_, student_acc_diff = np.load(f'{saved_arrays_folder}/trad_metrics_student_sbm{dataset}_{seed}_c={class_weights}.npy')
             acc_diff = teacher_acc_diff - student_acc_diff
 
             teacher_auc_diffs.append(teacher_auc_diff)
@@ -118,11 +119,11 @@ def create_heatmap_grid(auc_dict, datasets_p, datasets_q, class_weights_list,
         for col_idx, metric in enumerate(col_metrics):
             ax = fig.add_subplot(gs[row_idx, col_idx])
 
-            if row_idx == 0:
+            if row_idx == 0: # q set to 0.25
                 x_values = datasets_p
                 y_values = class_weights_list
                 x_label = 'Group Balance (p)'
-                y_label = 'Class Balance'
+                y_label = 'Class Balance (c)'
                 data_matrix = np.full((len(y_values), len(x_values)), np.nan)
                 for i, class_weight in enumerate(y_values):
                     for j, p_val in enumerate(x_values):
@@ -130,14 +131,14 @@ def create_heatmap_grid(auc_dict, datasets_p, datasets_q, class_weights_list,
                             f"avg_student_{metric_type}_diffs" if metric == 'student' else f"avg_{metric_type}_diff")
                         try:
                             data_matrix[i, j] = auc_dict[p_val][class_weight][key]
-                        except KeyError:
-                            pass
+                        except KeyError as e:
+                            print(0, e)
 
-            elif row_idx == 1:
+            elif row_idx == 1: # p set to 0.2
                 x_values = datasets_q
                 y_values = class_weights_list
                 x_label = 'Edge Ratio (q)'
-                y_label = 'Class Balance'
+                y_label = 'Class Balance (c)'
                 data_matrix = np.full((len(y_values), len(x_values)), np.nan)
                 for i, class_weight in enumerate(y_values):
                     for j, q_val in enumerate(x_values):
@@ -145,8 +146,8 @@ def create_heatmap_grid(auc_dict, datasets_p, datasets_q, class_weights_list,
                             f"avg_student_{metric_type}_diffs" if metric == 'student' else f"avg_{metric_type}_diff")
                         try:
                             data_matrix[i, j] = auc_dict[q_val][class_weight][key]
-                        except KeyError:
-                            pass
+                        except KeyError as e:
+                            print(1, e)
 
             else:
                 x_values = datasets_q
@@ -155,33 +156,42 @@ def create_heatmap_grid(auc_dict, datasets_p, datasets_q, class_weights_list,
                 y_label = 'Group Balance (p)'
                 fixed_class_weight = class_weights_list[2]
                 data_matrix = np.full((len(y_values), len(x_values)), np.nan)
+                
                 for i, p_val in enumerate(y_values):
                     for j, q_val in enumerate(x_values):
-                        try:
-                            if metric == 'teacher':
-                                val = (auc_dict[q_val][fixed_class_weight][f"avg_teacher_{metric_type}_diffs"] +
-                                       auc_dict[p_val][fixed_class_weight][f"avg_teacher_{metric_type}_diffs"]) / 2
-                            elif metric == 'student':
-                                val = (auc_dict[q_val][fixed_class_weight][f"avg_student_{metric_type}_diffs"] +
-                                       auc_dict[p_val][fixed_class_weight][f"avg_student_{metric_type}_diffs"]) / 2
-                            else:
-                                val = (auc_dict[q_val][fixed_class_weight][f"avg_{metric_type}_diff"] +
-                                       auc_dict[p_val][fixed_class_weight][f"avg_{metric_type}_diff"]) / 2
-                            data_matrix[i, j] = val
-                        except KeyError:
-                            pass
+                        vals = []
+                        for class_weight in class_weights_list: # take average across all class weights
+                            try:
+                                if metric == 'teacher':
+                                    val = (auc_dict[q_val][class_weight][f"avg_teacher_{metric_type}_diffs"] +
+                                           auc_dict[p_val][class_weight][f"avg_teacher_{metric_type}_diffs"]) / 2
+                                elif metric == 'student':
+                                    val = (auc_dict[q_val][class_weight][f"avg_student_{metric_type}_diffs"] +
+                                           auc_dict[p_val][class_weight][f"avg_student_{metric_type}_diffs"]) / 2
+                                else:
+                                    val = (auc_dict[q_val][class_weight][f"avg_{metric_type}_diff"] +
+                                           auc_dict[p_val][class_weight][f"avg_{metric_type}_diff"]) / 2
+                                vals.append(val)
+                            except KeyError as e:
+                                print(2, e)
+                        if vals:
+                            data_matrix[i, j] = np.mean(vals)
 
             
             # Set vmin and vmax based on metric
             if metric in ['teacher', 'student']:
                 vmin = shared_vmin
                 vmax = shared_vmax
+                cmap = 'viridis'
+                norm = None
             else:  # diff heatmap can have its own scale
                 vmin = teacher_student_vmin
                 vmax = teacher_student_vmax
-
+                cmap = 'RdBu'
+                norm = TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax)
+                
             sns.heatmap(
-                data_matrix, annot=True, cmap='viridis', ax=ax, fmt='.3f',
+                data_matrix, annot=True, cmap=cmap, norm=norm, ax=ax, fmt='.3f',
                 xticklabels=x_values, yticklabels=[str(cw)[:3] for cw in y_values], 
                 cbar_kws={'label': 'Difference'},
                 vmin=vmin, vmax=vmax
@@ -203,9 +213,6 @@ def create_heatmap_grid(auc_dict, datasets_p, datasets_q, class_weights_list,
 
     return fig
 
-
-
-
 # +
 # Create main figure with accuracy differences
 acc_fig = create_heatmap_grid(
@@ -226,3 +233,154 @@ auc_fig = create_heatmap_grid(
     metric_type='auc',
     save_path=f"{figs_folder}/fairness_heatmaps_auc.png"
 )
+print("done with heatmaps")
+
+
+# -
+
+def plot_fairness_subplots(auc_dict, class_weights_list, datasets_p, datasets_q, metric_type, save_path, sharey):
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5), sharey=sharey)
+    factors = ['class_balance', 'p', 'q']
+    
+    for i, factor in enumerate(factors):
+        ax = axes[i]
+        x_vals, datasets = [], []
+        
+        # Configure axis parameters
+        if factor == 'class_balance':
+            x_vals = [float(c.split(',')[0]) for c in class_weights_list]
+            datasets = datasets_p + datasets_q
+            x_label = "Class Balance (c)"
+        else:
+            datasets = datasets_p if factor == 'p' else datasets_q
+            x_vals = [float(d) for d in datasets]
+            x_label = "Group Balance (p)" if factor == 'p' else "Edge Prob (q)"
+
+        # Data collection containers
+        teacher_means, teacher_stds = [], []
+        student_means, student_stds = [], []
+
+        # Separate handling for different factors
+        if factor == 'class_balance':
+            # Handle class balance across all datasets
+            for x_val in x_vals:
+                teacher_vals, student_vals = [], []
+                class_key = f"{x_val:.1f},{1-x_val:.1f}"
+                
+                for dataset in datasets:
+                    try:
+                        teacher = auc_dict[dataset][class_key][f"avg_teacher_{metric_type}_diffs"]
+                        student = auc_dict[dataset][class_key][f"avg_student_{metric_type}_diffs"]
+                        if np.isfinite(teacher) and np.isfinite(student):
+                            teacher_vals.append(teacher)
+                            student_vals.append(student)
+                    except KeyError:
+                        continue
+                
+                # Store results
+                if teacher_vals and student_vals:
+                    teacher_means.append(np.mean(teacher_vals))
+                    teacher_stds.append(np.std(teacher_vals))
+                    student_means.append(np.mean(student_vals))
+                    student_stds.append(np.std(student_vals))
+                else:
+                    teacher_means.append(np.nan)
+                    teacher_stds.append(0)
+                    student_means.append(np.nan)
+                    student_stds.append(0)
+        else:
+            # Handle p/q factors
+            for dataset in datasets:
+                teacher_vals, student_vals = [], []
+                x_val = float(dataset)  # Direct conversion from dataset name
+                
+                for class_key in class_weights_list:
+                    try:
+                        teacher = auc_dict[dataset][class_key][f"avg_teacher_{metric_type}_diffs"]
+                        student = auc_dict[dataset][class_key][f"avg_student_{metric_type}_diffs"]
+                        if np.isfinite(teacher) and np.isfinite(student):
+                            teacher_vals.append(teacher)
+                            student_vals.append(student)
+                    except KeyError:
+                        continue
+                
+                # Store results
+                if teacher_vals and student_vals:
+                    teacher_means.append(np.mean(teacher_vals))
+                    teacher_stds.append(np.std(teacher_vals))
+                    student_means.append(np.mean(student_vals))
+                    student_stds.append(np.std(student_vals))
+                else:
+                    teacher_means.append(np.nan)
+                    teacher_stds.append(0)
+                    student_means.append(np.nan)
+                    student_stds.append(0)
+
+        # Colors
+        teacher_color = "#332288"  # Dark purple
+        student_color = "#EE7733"  # Vermilion
+        
+        # Plotting logic
+        x_pos = np.arange(len(x_vals))
+        valid = np.isfinite(teacher_means) & np.isfinite(student_means)
+        
+        # Teacher plot
+        ax.plot(x_pos[valid], np.array(teacher_means)[valid], '-o', color=teacher_color, label='Teacher')
+        ax.fill_between(x_pos[valid], 
+                        np.array(teacher_means)[valid] - np.array(teacher_stds)[valid],
+                        np.array(teacher_means)[valid] + np.array(teacher_stds)[valid],
+                        color=teacher_color, alpha=0.2)
+        
+        # Student plot
+        ax.plot(x_pos[valid], np.array(student_means)[valid], '--s', color=student_color, label='Student')
+        ax.fill_between(x_pos[valid],
+                        np.array(student_means)[valid] - np.array(student_stds)[valid],
+                        np.array(student_means)[valid] + np.array(student_stds)[valid],
+                        color=student_color, alpha=0.2)
+
+        # Axis formatting
+        ax.set_xticks(x_pos)
+        if factor == 'class_balance':
+            ax.set_xticklabels([f"{x:.1f},{1-x:.1f}" for x in x_vals])
+        else:
+            ax.set_xticklabels([f"{x:.2f}" for x in x_vals])
+        ax.set_xlabel(x_label)
+        if factor == 'class_balance':
+            ax.set_title(f"{metric_type.upper()} vs Class balance (c)")
+        elif factor == 'p':
+            ax.set_title(f"{metric_type.upper()} vs Group balance (p)")
+        else:
+            ax.set_title(f"{metric_type.upper()} vs Edge probability (q)")
+        ax.grid(True)
+
+    # Global formatting
+    axes[0].set_ylabel(f"{metric_type.upper()} Difference")
+    axes[0].legend()
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.show()
+
+
+
+# +
+plot_fairness_subplots(
+    auc_dict=auc_dict,
+    class_weights_list=class_weights_list,
+    datasets_p=datasets_p,
+    datasets_q=datasets_q,
+    metric_type="acc",
+    save_path=f"{figs_folder}/one_factor_acc.png",
+    sharey=True
+)
+
+plot_fairness_subplots(
+    auc_dict=auc_dict,
+    class_weights_list=class_weights_list,
+    datasets_p=datasets_p,
+    datasets_q=datasets_q,
+    metric_type="auc",
+    save_path=f"{figs_folder}/one_factor_auc.png",
+    sharey=True
+)
+
+print("done with line plots")
