@@ -85,8 +85,6 @@ import shutil
 # -
 
 
-class_weights_val = environ.get('class_weights', '0.1,0.9') 
-
 CPF_data = ["cora", "citeseer", "pubmed", "a-computer", "a-photo"]
 OGB_data = ["ogbn-arxiv", "ogbn-products"]
 NonHom_data = ["pokec", "penn94"]
@@ -95,7 +93,7 @@ Nifty_data = ["German", "Credit"]
 Say_no_data = ["Pokec-z", "Pokec-n", "NBA"]
 Synthetic_data = ["syn-1", "syn-2"]
 Twitter_data = ["sport", "occupation"]
-SBM = ["sbm0.0","sbm0.1","sbm0.2","sbm0.3","sbm0.4","sbm0.5","sbm0.05", "sbm0.25", "sbm0.50", "sbm0.75", "sbm1.00"]
+SBM = ["sbm"]
 
 
 def load_data(dataset, dataset_path, **kwargs):
@@ -106,6 +104,9 @@ def load_data(dataset, dataset_path, **kwargs):
             kwargs["seed"],
             kwargs["labelrate_train"],
             kwargs["labelrate_val"],
+            kwargs["p"],
+            kwargs["q"],
+            kwargs["c"],
         )
     elif dataset in OGB_data:
         return load_ogb_data(dataset, dataset_path)
@@ -122,7 +123,7 @@ def load_data(dataset, dataset_path, **kwargs):
     elif dataset in Twitter_data:
         return load_twitter(dataset)
     elif dataset in SBM:
-        return load_sbm(dataset)
+        return load_sbm(dataset, kwargs["p"], kwargs["q"], kwargs["c"])
     else:
         raise ValueError(f"Unknown dataset: {dataset}")
 
@@ -322,16 +323,20 @@ from torch_geometric.utils import stochastic_blockmodel_graph
 
 class CustomSBMDataset(StochasticBlockModelDataset):
     
-    def __init__(self, *args, class_weights=None, p=0.2, q=0.25, num_nodes=3000, **kwargs):
-        self.class_weights = class_weights if class_weights is not None else [0.1, 0.9]
-        self.p = p  # group weights
+    def __init__(self, *args, c=None, p=0.3, q=0.50, num_nodes=3000, **kwargs):
+        self.c = c # class balance ratio
+        self.p = p  # group balance ratio
         self.q = q  # edge probability ratio
         self.num_nodes = num_nodes        
         super().__init__(*args, **kwargs)
         
     @property
+    def raw_file_names(self):
+        return ['dummy_file']
+
+    @property
     def processed_file_names(self):
-        return [f'data_p={self.p}_q={self.q}_class={self.class_weights}.pt']
+        return [f'data_p={self.p}_q={self.q}c={self.c}.pt']
     
     def process(self):
         print("SBM dataset")
@@ -340,7 +345,7 @@ class CustomSBMDataset(StochasticBlockModelDataset):
         y_s = [0, 1]
         
         # Set up weights for classes and groups
-        class_weights = self.class_weights
+        class_weights = torch.tensor([self.c, 1-self.c])
         print("class weights", class_weights)
         group_weights = torch.tensor([self.p, 1-self.p])  # p for group weights
         print("group weights", group_weights)
@@ -426,15 +431,15 @@ class CustomSBMDataset(StochasticBlockModelDataset):
                 # Modify core features based on class (y)
                 mask = (class_labels == y) & (group_labels == a)
                 if y == 0:
-                    x[mask, :d] = sig_core * x[mask, :d] - 1 # y=0 data centered at -0.05
+                    x[mask, :d] = sig_core * x[mask, :d] - 1 # y=0 data centered at -1
                 else:
-                    x[mask, :d] = sig_core * x[mask, :d] + 1 # y=1 data centered at +0.05
+                    x[mask, :d] = sig_core * x[mask, :d] + 1 # y=1 data centered at +1
 
                 # Modify spurious features based on group (a)
                 if a == 0:
-                    x[mask, d:] = sig_spu * x[mask, d:] - 1 # a=0 data centered at -0.05
+                    x[mask, d:] = sig_spu * x[mask, d:] - 1 # a=0 data centered at -1
                 else:
-                    x[mask, d:] = sig_spu * x[mask, d:] + 1 # a=1 data centered at +0.05
+                    x[mask, d:] = sig_spu * x[mask, d:] + 1 # a=1 data centered at +1
                     
         from sklearn.decomposition import PCA
         x_ = x.tolist()
@@ -544,23 +549,15 @@ def check_sbm_edge_probabilities(edge_index, class_labels, group_labels,q_val):
     assert len(failed_checks) < 2, f"Some edge probabilities were outside the expected threshold: {failed_checks}"
 
 
-def load_sbm(dataset):
-    if len(dataset) == 6: # ex. sbm0.2
-        p = float(dataset[-3:]) # varying edge probability
-        q = 0.25
-    else: # ex. sbm0.25
-        q = float(dataset[-4:]) # varying edge probability
-        p = 0.2 
-
+def load_sbm(dataset, p, q, c):
     print("q (edge prob ratio):",q)
     print("p (group balance):",p)
     
     num_channels = 200
-    class_weights = [float(class_weights_val[:3]),float(class_weights_val[4:])] # vary this for experimentation
     num_nodes = 3000
     
     # Set up dataset name and path
-    dataset_name = f"sbm_p{p}_q{q}_class{class_weights_val}_nodes{num_nodes}_channels{num_channels}"
+    dataset_name = f"sbm_p{p}_q{q}_class{c}_nodes{num_nodes}_channels{num_channels}"
     dataset_path = os.path.join('./data/sbm', dataset_name)
 
     # Create the dataset
@@ -576,7 +573,7 @@ def load_sbm(dataset):
         is_undirected=True,
         transform=None,
         pre_transform=None,
-        class_weights=class_weights
+        c=c
     )
 
     # Access the generated graph

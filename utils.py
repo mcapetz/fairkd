@@ -18,7 +18,7 @@ Nifty_data = ["German", "Credit"]
 Say_no_data = ["Pokec-z", "Pokec-n", "NBA"]
 Synthetic_data = ["syn-1", "syn-2"]
 Twitter_data = ["sport", "occupation"]
-SBM = ["sbm0.0","sbm0.1","sbm0.2","sbm0.3","sbm0.4","sbm0.5","sbm0.05", "sbm0.25", "sbm0.50", "sbm0.75", "sbm1.00"]
+SBM = ["sbm"]
 
 
 def set_seed(seed):

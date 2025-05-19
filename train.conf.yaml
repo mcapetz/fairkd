@@ -2,6 +2,402 @@ global:
   num_layers: 2
   hidden_dim: 128
   
+sbm: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+
+sbm0.05: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+sbm0.25: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+sbm0.50: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+sbm0.75: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+sbm1.00: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+  
+sbm0.0: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+sbm0.1: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+sbm0.2: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+    
+sbm0.3: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+sbm0.4: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+sbm0.5: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+  
+syn-1: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+    
+sbm0.0: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+    
+sbm0.0: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+    
+syn-2: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+occupation: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+    
+sport: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+  
+Pokec-n: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+
+Pokec-z: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+  
+NBA: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+  
+German: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001  
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+
+Credit: 
+  SAGE:
+    fan_out: 5,5
+    learning_rate: 0.01
+    dropout_ratio: 0
+    weight_decay: 0.0005
+  
+  GCN:
+    hidden_dim: 64
+    dropout_ratio: 0.8
+    weight_decay: 0.001
+    
+  MLP:
+    learning_rate: 0.01
+    weight_decay: 0.005
+    dropout_ratio: 0.6
+  
 cora: 
   SAGE:
     fan_out: 5,5

@@ -37,11 +37,9 @@ from utils import (
     graph_split,
     set_seed,
 )
+
+
 # -
-
-# get class weights from runner environment
-class_weights = environ.get('class_weights', '0.1,0.9')
-
 
 def get_args():
     parser = argparse.ArgumentParser(description="PyTorch DGL implementation")
@@ -99,6 +97,24 @@ def get_args():
         type=int,
         default=0,
         help="For Non-Homo datasets only, one of [0,1,2,3,4]",
+    )
+    parser.add_argument(
+        "--p",
+        type=float,
+        default=0.3,
+        help="For sbm datasets only, group balance ratio",
+    )
+    parser.add_argument(
+        "--q",
+        type=float,
+        default=0.50,
+        help="For sbm datasets only, group edge probability",
+    )
+    parser.add_argument(
+        "--c",
+        type=float,
+        default=0.3,
+        help="For sbm datasets only, class balance ratio",
     )
 
     """Model"""
@@ -234,6 +250,9 @@ def run(args):
         seed=args.seed,
         labelrate_train=args.labelrate_train,
         labelrate_val=args.labelrate_val,
+        p=args.p,
+        q=args.q,
+        c=args.c
     )
     logger.info(f"Total {g.number_of_nodes()} nodes.")
     logger.info(f"Total {g.number_of_edges()} edges.")
@@ -362,17 +381,14 @@ def run(args):
 
     # 1. Assert class balance
     class_1_ratio = float(total_y1) / total_samples
-    expected_class_1 = float(class_weights[-3:])
+    expected_class_1 = 1-args.c
     std_error_class = math.sqrt(expected_class_1 * (1-expected_class_1) / test_samples)
     threshold_class = 3 * std_error_class
     assert abs(class_1_ratio - expected_class_1) < threshold_class, f"Class 1 ratio {class_1_ratio:.2f} doesn't match expected {expected_class_1:.2f}"
 
     # 2. Assert group balance
     s1_ratio = float(s1.sum()) / total_samples
-    if len(args.dataset) == 6:
-        expected_group_0 = 1-float(args.dataset[-3:]) # p depends on the name of the dataset
-    else:
-        expected_group_0 = 0.8 # default for p when varying q
+    expected_group_0 = 1-args.p # default for p when varying q
     std_error_group = math.sqrt(expected_group_0 * (1-expected_group_0) / test_samples)
     threshold_group = 3 * std_error_group
     assert abs(s1_ratio - expected_group_0) < threshold_group, f"Group balance {s1_ratio:.2f} doesn't match expected {expected_group_0:.2f} since it is not within threshold {threshold_group:.2f}"
@@ -381,10 +397,7 @@ def run(args):
     src_nodes, tgt_nodes = g.edges(order='eid')
     num_edges = g.num_edges()
     
-    if len(args.dataset) == 6:
-        check_sbm_edge_probabilities(torch.stack([src_nodes, tgt_nodes]),labels,sens,0.25)
-    else:
-        check_sbm_edge_probabilities(torch.stack([src_nodes, tgt_nodes]),labels,sens,float(args.dataset[-4:]))
+    check_sbm_edge_probabilities(torch.stack([src_nodes, tgt_nodes]),labels,sens,args.q)
 
     """ Calculating traditional fairness metrics """
     # calculate and output demographic parity and equal opportunity (original fairness metrics)
@@ -408,22 +421,17 @@ def run(args):
     
     trad_metrics = [dp_0, dp_1, eo_0, eo_1, dp, eo, acc_diff]
     
-    np.save(f'saved_arrays/trad_metrics_teacher_{args.dataset}_{args.seed}_c={class_weights}.npy', trad_metrics, allow_pickle=True)
+    np.save(f'saved_arrays/trad_metrics_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', trad_metrics, allow_pickle=True)
     
     
     """ Calculating confusion matrices """
     overall_cm = confusion_matrix(labels[idx_test], pred[idx_test])
     group_0_cm = confusion_matrix(labels[idx_test][sens[idx_test] == 0], pred[idx_test][sens[idx_test] == 0])
     group_1_cm = confusion_matrix(labels[idx_test][sens[idx_test] == 1], pred[idx_test][sens[idx_test] == 1])
-    
-    # save as the correct name based on what we are varying
-    p_or_q = "q"
-    if len(args.dataset) == 6:
-        p_or_q = "p"
         
-    np.save(f'saved_arrays/overall_cm_teacher_{args.dataset}_{args.seed}_c={class_weights}.npy', overall_cm, allow_pickle=True)
-    np.save(f'saved_arrays/group_0_cm_teacher_{args.dataset}_{args.seed}_c={class_weights}.npy', group_0_cm, allow_pickle=True)
-    np.save(f'saved_arrays/group_1_cm_teacher_{args.dataset}_{args.seed}_c={class_weights}.npy', group_1_cm, allow_pickle=True)    
+    np.save(f'saved_arrays/overall_cm_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', overall_cm, allow_pickle=True)
+    np.save(f'saved_arrays/group_0_cm_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', group_0_cm, allow_pickle=True)
+    np.save(f'saved_arrays/group_1_cm_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', group_1_cm, allow_pickle=True)    
     
     """ Calculating AUC """
     # out_np is the logits array, use softmax to get probabilities
@@ -490,8 +498,8 @@ def run(args):
     macro_roc_auc_ovr_diff = macro_roc_auc_ovr_0 - macro_roc_auc_ovr_1
 
     print(f"auc diff: {macro_roc_auc_ovr_diff}")
-    np.save(f'saved_arrays/auc_ovr_diff_teacher_{args.dataset}_{args.seed}_c={class_weights}.npy', macro_roc_auc_ovr_diff, allow_pickle=True)
-    np.save(f'saved_arrays/auc_ovr_overall_teacher_{args.dataset}_{args.seed}_c={class_weights}.npy', macro_roc_auc_ovr, allow_pickle=True)
+    np.save(f'saved_arrays/auc_ovr_diff_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', macro_roc_auc_ovr_diff, allow_pickle=True)
+    np.save(f'saved_arrays/auc_ovr_overall_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', macro_roc_auc_ovr, allow_pickle=True)
 
     """ Saving loss curve and model """
     if args.save_results:
@@ -510,7 +518,7 @@ def run(args):
 
     score = score_lst
     score_str = "".join([f"{s : .4f}\t" for s in score])
-    np.save(f'saved_arrays/acc_teacher_{args.dataset}_{args.seed}_c={class_weights}.npy', float(score_str), allow_pickle=True)
+    np.save(f'saved_arrays/acc_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', float(score_str), allow_pickle=True)
     
     return score_lst
 
@@ -541,13 +549,8 @@ def main():
 
     # for collecting aggregated results
     print("test acc: ", score_str)
-
-    # save as the correct name based on what we are varying
-    p_or_q = "q"
-    if len(args.dataset) == 6:
-        p_or_q = "p"
         
-    np.save(f'saved_arrays/acc_teacher_{args.dataset}_{args.seed}_c={class_weights}.npy', float(score_str), allow_pickle=True)
+    np.save(f'saved_arrays/acc_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', float(score_str), allow_pickle=True)
 
 
 if __name__ == "__main__":
