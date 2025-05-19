@@ -26,19 +26,17 @@ import os
 
 # Settings
 num_runs = 5
-datasets = ["sbm0.1", "sbm0.2"] #, "sbm0.3", "sbm0.4", "sbm0.5", "sbm0.05", "sbm0.25", "sbm0.50", "sbm0.75", "sbm1.00"
-class_weights_list = ["0.1,0.9", "0.2,0.8", "0.3,0.7", "0.4,0.6", "0.5,0.5"]
-
+dataset = "sbm"
 failed_runs = []
 
 for i in range(num_runs):    
-    for class_weights in class_weights_list:
-        print("class_weights: ", class_weights)
-        environ['class_weights'] = class_weights
+    for c in [0.1, 0.2, 0.3, 0.4, 0.5]:
+        print("c: ", c)
     
-        for dataset in datasets:
+        for p in [0.1, 0.2]:
+            q = 0.5
             # Construct the filename
-            filename = f"auc_ovr_diff_student_{dataset}_{i}_c={class_weights}.npy"
+            filename = f"trad_metrics_student_{i}_p={p}_q={q}_c={c}.npy"
             file_path = os.path.join("saved_arrays", filename)
             
             # check if it is already done
@@ -51,7 +49,7 @@ for i in range(num_runs):
             print("\t", "dataset: ", dataset)
             print("\t", "teacher")
             script_to_run = 'train_teacher.py'
-            script_arguments = ['--exp_setting', 'tran', '--teacher', 'GCN', '--dataset', dataset, '--seed', str(i)]
+            script_arguments = ['--exp_setting', 'tran', '--teacher', 'GCN', '--dataset', dataset, '--p', str(p), '--q', str(q), '--c', str(c), '--seed', str(i)]
             try:
                 result = subprocess.run(['python', script_to_run] + script_arguments, capture_output=True, text=True, check=True)
             except subprocess.CalledProcessError as e:
@@ -78,7 +76,7 @@ for i in range(num_runs):
             
             print("student")
             script_to_run = 'train_student.py'
-            script_arguments = ['--exp_setting', 'tran', '--teacher', 'GCN', '--student', 'MLP', '--dataset', dataset, '--out_t_path', 'outputs', '--seed', str(i)]
+            script_arguments = ['--exp_setting', 'tran', '--teacher', 'GCN', '--student', 'MLP', '--dataset', dataset, '--p', str(p), '--q', str(q), '--c', str(c), '--out_t_path', 'outputs', '--seed', str(i)]
             try:
                 result = subprocess.run(['python', script_to_run] + script_arguments, capture_output=True, text=True, check=True)
             except subprocess.CalledProcessError as e:
