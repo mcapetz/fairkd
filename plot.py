@@ -471,7 +471,7 @@ def plot_fairness_subplots_updated(auc_dict_pxc, auc_dict_qxc, auc_dict_qxp,
     ax.set_xticklabels([f"{p:.1f}" for p in p_values])
     ax.set_xlabel("Group Balance (p)")
     ax.set_title(f"{'Acc' if metric_type == 'acc' else 'AUC'} vs Group Balance (p)")
-#     ax.grid(True)
+    ax.legend()
     
     # 3. Edge probability plot (q) - average across c values
     ax = axes[2]
@@ -529,7 +529,7 @@ def plot_fairness_subplots_updated(auc_dict_pxc, auc_dict_qxc, auc_dict_qxp,
     ax.set_xticklabels([f"{q:.2f}" for q in q_values])
     ax.set_xlabel("Edge Probability (q)")
     ax.set_title(f"{'Acc' if metric_type == 'acc' else 'AUC'} vs Edge Probability (q)")
-#     ax.grid(True)
+    ax.legend()
     
     # Set the main title
     fig.suptitle(f"{'Acc' if metric_type == 'acc' else 'AUC'} One-factor Plots", fontsize=16)
