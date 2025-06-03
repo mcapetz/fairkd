@@ -1,8 +1,13 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn as sns
 from matplotlib.colors import TwoSlopeNorm
+from scipy import stats
+from scipy.stats import pearsonr, spearmanr
+from scipy import stats as scipy_stats
+import matplotlib.cm as cm
 
 seeds = ["0", "1", "2", "3", "4"]
 
@@ -10,7 +15,7 @@ auc_dict_pxc = dict()
 auc_dict_qxc = dict()
 auc_dict_qxp = dict()
 
-figs_folder = "figs"
+figs_folder = "figs2"
 saved_arrays_folder = "saved_arrays"
 
 # load in the auc values
@@ -552,3 +557,391 @@ fig_acc = plot_fairness_subplots_updated(auc_dict_pxc, auc_dict_qxc, auc_dict_qx
 fig_auc = plot_fairness_subplots_updated(auc_dict_pxc, auc_dict_qxc, auc_dict_qxp, 
                                      metric_type='auc', 
                                      save_path=f'{figs_folder}/fairness_lines_auc.png')
+
+
+# +
+def plot_teacher_vs_student_scatter(auc_dict_pxc, auc_dict_qxc, auc_dict_qxp, 
+                                   metric_type='acc', save_path=None, color_by='p'):
+    """
+    Create scatter plots showing teacher vs student fairness metrics with color-coding by balance parameters.
+    
+    Parameters:
+    - auc_dict_pxc: Dictionary for p vs c (q fixed at 0.5)
+    - auc_dict_qxc: Dictionary for q vs c (p fixed at 0.3)  
+    - auc_dict_qxp: Dictionary for q vs p (c fixed at 0.3)
+    - metric_type: 'acc' or 'auc'
+    - save_path: Path to save the figure
+    - color_by: Parameter to color by ('p', 'c', 'q', or 'combined_balance')
+    """
+    
+    # Collect all teacher and student fairness values with parameters
+    teacher_values = []
+    student_values = []
+    parameter_labels = []
+    p_values = []
+    c_values = []
+    q_values = []
+    
+    # From p vs c dict (q=0.5)
+    for p in [0.1, 0.2, 0.3, 0.4, 0.5]:
+        for c in [0.1, 0.2, 0.3, 0.4, 0.5]:
+            try:
+                teacher_val = auc_dict_pxc[p][c][f"avg_teacher_{metric_type}_diffs"]
+                student_val = auc_dict_pxc[p][c][f"avg_student_{metric_type}_diffs"]
+                teacher_values.append(teacher_val)
+                student_values.append(student_val)
+                parameter_labels.append(f"p={p}, c={c}, q=0.5")
+                p_values.append(p)
+                c_values.append(c)
+                q_values.append(0.5)
+            except KeyError:
+                continue
+    
+    # From q vs c dict (p=0.3)
+    for q in [0.05, 0.25, 0.50, 0.75, 1.00]:
+        for c in [0.1, 0.2, 0.3, 0.4, 0.5]:
+            try:
+                teacher_val = auc_dict_qxc[q][c][f"avg_teacher_{metric_type}_diffs"]
+                student_val = auc_dict_qxc[q][c][f"avg_student_{metric_type}_diffs"]
+                teacher_values.append(teacher_val)
+                student_values.append(student_val)
+                parameter_labels.append(f"p=0.3, c={c}, q={q}")
+                p_values.append(0.3)
+                c_values.append(c)
+                q_values.append(q)
+            except KeyError:
+                continue
+    
+    # From q vs p dict (c=0.3)
+    for q in [0.05, 0.25, 0.50, 0.75, 1.00]:
+        for p in [0.1, 0.2, 0.3, 0.4, 0.5]:
+            try:
+                teacher_val = auc_dict_qxp[q][p][f"avg_teacher_{metric_type}_diffs"]
+                student_val = auc_dict_qxp[q][p][f"avg_student_{metric_type}_diffs"]
+                teacher_values.append(teacher_val)
+                student_values.append(student_val)
+                parameter_labels.append(f"p={p}, c=0.3, q={q}")
+                p_values.append(p)
+                c_values.append(0.3)
+                q_values.append(q)
+            except KeyError:
+                continue
+    
+    # Convert to numpy arrays
+    teacher_values = np.array(teacher_values)
+    student_values = np.array(student_values)
+    p_values = np.array(p_values)
+    c_values = np.array(c_values)
+    q_values = np.array(q_values)
+    
+    # Remove any NaN values
+    valid_mask = np.isfinite(teacher_values) & np.isfinite(student_values)
+    teacher_values = teacher_values[valid_mask]
+    student_values = student_values[valid_mask]
+    p_values = p_values[valid_mask]
+    c_values = c_values[valid_mask]
+    q_values = q_values[valid_mask]
+    parameter_labels = [parameter_labels[i] for i in range(len(parameter_labels)) if valid_mask[i]]
+    
+    # Determine color values based on color_by parameter
+    if color_by == 'p':
+        color_values = p_values
+        color_label = 'Group Balance (p)'
+        cmap = 'viridis'
+    elif color_by == 'c':
+        color_values = c_values
+        color_label = 'Class Balance (c)'
+        cmap = 'plasma'
+    elif color_by == 'q':
+        color_values = q_values
+        color_label = 'Group Connectivity (q)'
+        cmap = 'coolwarm'
+    elif color_by == 'combined_balance':
+        # Create a combined balance metric
+        color_values = (np.abs(p_values - 0.5) + np.abs(c_values - 0.5) + np.abs(q_values - 1.0))/3
+        color_label = 'Combined Imbalance'
+        cmap = 'RdYlBu_r'
+    else:
+        color_values = p_values  # Default to p
+        color_label = 'Group Balance (p)'
+        cmap = 'viridis'
+    
+    # Create the plot
+    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+    
+    # Create scatter plot with color coding
+    scatter = ax.scatter(teacher_values, student_values, 
+                        c=color_values, cmap=cmap,
+                        alpha=0.7, s=80, edgecolors='black', linewidth=0.5)
+    
+    # Add colorbar
+    cbar = plt.colorbar(scatter, ax=ax, shrink=0.8)
+    cbar.set_label(color_label, fontsize=11)
+    
+    # Calculate correlation coefficients
+    pearson_r, pearson_p = pearsonr(teacher_values, student_values)
+    spearman_r, spearman_p = spearmanr(teacher_values, student_values)
+    
+    # Fit regression line
+    slope, intercept, r_value, p_value, std_err = scipy_stats.linregress(teacher_values, student_values)
+    line_x = np.array([teacher_values.min(), teacher_values.max()])
+    line_y = slope * line_x + intercept
+    
+    # Plot regression line
+    ax.plot(line_x, line_y, 'r--', linewidth=2, alpha=0.8, label=f'Linear fit (R²={r_value**2:.3f})')
+    
+    # Add diagonal line (perfect correlation)
+    min_val = min(teacher_values.min(), student_values.min())
+    max_val = max(teacher_values.max(), student_values.max())
+    ax.plot([min_val, max_val], [min_val, max_val], 'k:', linewidth=2, alpha=0.5, label='Perfect correlation')
+    
+    # Labels and title
+    metric_name = 'Accuracy' if metric_type == 'acc' else 'AUC'
+    ax.set_xlabel(f'Teacher {metric_name} Fairness Difference', fontsize=12)
+    ax.set_ylabel(f'Student {metric_name} Fairness Difference', fontsize=12)
+    ax.set_title(f'Teacher vs Student {metric_name} Fairness (Colored by {color_label})', fontsize=14, pad=20)
+    
+    # Add correlation statistics as text box
+    stats_text = f"""Correlation Statistics:
+Pearson r = {pearson_r:.3f} (p = {pearson_p:.3f})
+Spearman ρ = {spearman_r:.3f} (p = {spearman_p:.3f})
+R² = {r_value**2:.3f}
+n = {len(teacher_values)} points"""
+
+    ax.text(0.05, 0.95, stats_text, transform=ax.transAxes, fontsize=10,
+            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+    
+    # Add interpretation text
+    if pearson_r > 0.7:
+        interpretation = "Strong positive correlation"
+    elif pearson_r > 0.5:
+        interpretation = "Moderate positive correlation"  
+    elif pearson_r > 0.3:
+        interpretation = "Weak positive correlation"
+    elif pearson_r > -0.3:
+        interpretation = "No clear correlation"
+    elif pearson_r > -0.5:
+        interpretation = "Weak negative correlation"
+    elif pearson_r > -0.7:
+        interpretation = "Moderate negative correlation"
+    else:
+        interpretation = "Strong negative correlation"
+        
+    print(f"{interpretation} - Colored by {color_label}")
+    
+    # Legend
+    ax.legend(loc='upper right')
+    
+    # Set aspect ratio for better comparison
+    ax.set_aspect('equal', adjustable='box')
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+    
+    return fig, (pearson_r, pearson_p, spearman_r, spearman_p, r_value**2)
+
+
+# Alternative version with discrete color coding for clearer visualization
+def plot_teacher_vs_student_scatter_discrete(pxc, qxc, qxp, metric_type='acc', ax=None, save_path=None):
+    
+    """
+    Create scatter plots with discrete color coding for different balance categories.
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
+        
+    # [Same data collection code as above...]
+    teacher_values = []
+    student_values = []
+    parameter_labels = []
+    p_values = []
+    c_values = []
+    q_values = []
+    
+    # From p vs c dict (q=0.5)
+    for p in [0.1, 0.2, 0.3, 0.4, 0.5]:
+        for c in [0.1, 0.2, 0.3, 0.4, 0.5]:
+            try:
+                teacher_val = auc_dict_pxc[p][c][f"avg_teacher_{metric_type}_diffs"]
+                student_val = auc_dict_pxc[p][c][f"avg_student_{metric_type}_diffs"]
+                teacher_values.append(teacher_val)
+                student_values.append(student_val)
+                parameter_labels.append(f"p={p}, c={c}, q=0.5")
+                p_values.append(p)
+                c_values.append(c)
+                q_values.append(0.5)
+            except KeyError:
+                continue
+    
+    # From q vs c dict (p=0.3)
+    for q in [0.05, 0.25, 0.50, 0.75, 1.00]:
+        for c in [0.1, 0.2, 0.3, 0.4, 0.5]:
+            try:
+                teacher_val = auc_dict_qxc[q][c][f"avg_teacher_{metric_type}_diffs"]
+                student_val = auc_dict_qxc[q][c][f"avg_student_{metric_type}_diffs"]
+                teacher_values.append(teacher_val)
+                student_values.append(student_val)
+                parameter_labels.append(f"p=0.3, c={c}, q={q}")
+                p_values.append(0.3)
+                c_values.append(c)
+                q_values.append(q)
+            except KeyError:
+                continue
+    
+    # From q vs p dict (c=0.3)
+    for q in [0.05, 0.25, 0.50, 0.75, 1.00]:
+        for p in [0.1, 0.2, 0.3, 0.4, 0.5]:
+            try:
+                teacher_val = auc_dict_qxp[q][p][f"avg_teacher_{metric_type}_diffs"]
+                student_val = auc_dict_qxp[q][p][f"avg_student_{metric_type}_diffs"]
+                teacher_values.append(teacher_val)
+                student_values.append(student_val)
+                parameter_labels.append(f"p={p}, c=0.3, q={q}")
+                p_values.append(p)
+                c_values.append(0.3)
+                q_values.append(q)
+            except KeyError:
+                continue
+    
+    # Convert to numpy arrays and clean
+    teacher_values = np.array(teacher_values)
+    student_values = np.array(student_values)
+    p_values = np.array(p_values)
+    c_values = np.array(c_values)
+    q_values = np.array(q_values)
+    
+    valid_mask = np.isfinite(teacher_values) & np.isfinite(student_values)
+    teacher_values = teacher_values[valid_mask]
+    student_values = student_values[valid_mask]
+    p_values = p_values[valid_mask]
+    c_values = c_values[valid_mask]
+    q_values = q_values[valid_mask]
+    
+    # Create balance categories
+    balance_categories = []
+    colors = []
+    color_map = {
+        'High Balance': '#2E8B57',      # Sea Green
+        'Medium Balance': '#FFA500',     # Orange
+        'Low Balance': '#DC143C',        # Crimson
+        'Very Low Balance': '#8B0000'    # Dark Red
+    }
+    
+    for i in range(len(p_values)):
+        p, c, q = p_values[i], c_values[i], q_values[i]
+        
+        # Calculate balance score (closer to 0.5 is more balanced)
+        balance_score = (abs(p - 0.5) + abs(c - 0.5) + abs(q - 1.0)) / 3
+        
+        if balance_score < 0.15:
+            category = 'High Balance'
+        elif balance_score < 0.25:
+            category = 'Medium Balance'
+        elif balance_score < 0.35:
+            category = 'Low Balance'
+        else:
+            category = 'Very Low Balance'
+            
+        balance_categories.append(category)
+        colors.append(color_map[category])
+    
+    # Create the plot
+    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+    
+    # Plot points by category
+    for category in color_map.keys():
+        mask = [cat == category for cat in balance_categories]
+        if any(mask):
+            ax.scatter(teacher_values[mask], student_values[mask], 
+                      c=color_map[category], label=category,
+                      alpha=0.7, s=80, edgecolors='black', linewidth=0.5)
+    
+    # Add regression line and diagonal
+    pearson_r, pearson_p = pearsonr(teacher_values, student_values)
+    slope, intercept, r_value, p_value, std_err = scipy_stats.linregress(teacher_values, student_values)
+    line_x = np.array([teacher_values.min(), teacher_values.max()])
+    line_y = slope * line_x + intercept
+    
+    ax.plot(line_x, line_y, 'r--', linewidth=2, alpha=0.8, label=f'Linear fit (R²={r_value**2:.3f})')
+    
+    min_val = min(teacher_values.min(), student_values.min())
+    max_val = max(teacher_values.max(), student_values.max())
+    ax.plot([min_val, max_val], [min_val, max_val], 'k:', linewidth=2, alpha=0.5, label='Perfect correlation')
+    
+    # Labels and formatting
+    metric_name = 'Accuracy' if metric_type == 'acc' else 'AUC'
+    ax.set_xlabel(f'Teacher {metric_name} Fairness Difference', fontsize=12)
+    ax.set_ylabel(f'Student {metric_name} Fairness Difference', fontsize=12)
+    ax.set_title(f'Teacher vs Student {metric_name} Fairness (by Balance Level)', fontsize=14, pad=20)
+    
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    ax.set_aspect('equal', adjustable='box')
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+    
+    return fig, balance_categories
+
+
+# +
+# Color by p/q/c
+fig, stats = plot_teacher_vs_student_scatter(
+    auc_dict_pxc, auc_dict_qxc, auc_dict_qxp, 
+    metric_type='acc', color_by='p', save_path=f'{figs_folder}/acc_scatter_by_p.png'
+)
+
+fig, stats = plot_teacher_vs_student_scatter(
+    auc_dict_pxc, auc_dict_qxc, auc_dict_qxp, 
+    metric_type='acc', color_by='q', save_path=f'{figs_folder}/acc_scatter_by_q.png'
+)
+
+fig, stats = plot_teacher_vs_student_scatter(
+    auc_dict_pxc, auc_dict_qxc, auc_dict_qxp, 
+    metric_type='acc', color_by='c', save_path=f'{figs_folder}/acc_scatter_by_c.png'
+)
+
+fig, stats = plot_teacher_vs_student_scatter(
+    auc_dict_pxc, auc_dict_qxc, auc_dict_qxp, 
+    metric_type='acc', color_by='combined_balance', save_path=f'{figs_folder}/acc_scatter_by_combined.png'
+)
+
+fig, stats = plot_teacher_vs_student_scatter(
+    auc_dict_pxc, auc_dict_qxc, auc_dict_qxp, 
+    metric_type='auc', color_by='p', save_path=f'{figs_folder}/auc_scatter_by_p.png'
+)
+
+fig, stats = plot_teacher_vs_student_scatter(
+    auc_dict_pxc, auc_dict_qxc, auc_dict_qxp, 
+    metric_type='auc', color_by='q', save_path=f'{figs_folder}/auc_scatter_by_q.png'
+)
+
+fig, stats = plot_teacher_vs_student_scatter(
+    auc_dict_pxc, auc_dict_qxc, auc_dict_qxp, 
+    metric_type='auc', color_by='c', save_path=f'{figs_folder}/auc_scatter_by_c.png'
+)
+
+fig, stats = plot_teacher_vs_student_scatter(
+    auc_dict_pxc, auc_dict_qxc, auc_dict_qxp, 
+    metric_type='auc', color_by='combined_balance', save_path=f'{figs_folder}/auc_scatter_by_combined.png'
+)
+
+# Use discrete categories
+fig, categories = plot_teacher_vs_student_scatter_discrete(
+    auc_dict_pxc, auc_dict_qxc, auc_dict_qxp, 
+    metric_type='acc', save_path=f'{figs_folder}/acc_scatter_discrete.png'
+)
+
+fig, categories = plot_teacher_vs_student_scatter_discrete(
+    auc_dict_pxc, auc_dict_qxc, auc_dict_qxp, 
+    metric_type='auc', save_path=f'{figs_folder}/auc_scatter_discrete.png'
+)
