@@ -356,48 +356,50 @@ def run(args):
     
     # convert model out to preds via argmax
     pred = out_np.argmax(axis=1)
-     
-    """ Checking if class and group balance are correct """
-    # Subset for test set
-    test_labels = labels[idx_test]
-    test_sens = sens[idx_test]
-    test_samples = len(idx_test)
-
-    # Group sizes
-    s0 = test_sens == 0
-    s1 = test_sens == 1
-
-    # Class counts per group
-    y1_s0 = test_labels[s0].sum()
-    y0_s0 = len(test_labels[s0]) - y1_s0
-
-    y1_s1 = test_labels[s1].sum()
-    y0_s1 = len(test_labels[s1]) - y1_s1
-
-    # Sanity checks
-    total_samples = len(test_labels)
-    total_y1 = test_labels.sum()
-    total_y0 = total_samples - total_y1
-
-    # 1. Assert class balance
-    class_1_ratio = float(total_y1) / total_samples
-    expected_class_1 = 1-args.c
-    std_error_class = math.sqrt(expected_class_1 * (1-expected_class_1) / test_samples)
-    threshold_class = 3 * std_error_class
-    assert abs(class_1_ratio - expected_class_1) < threshold_class, f"Class 1 ratio {class_1_ratio:.2f} doesn't match expected {expected_class_1:.2f}"
-
-    # 2. Assert group balance
-    s1_ratio = float(s1.sum()) / total_samples
-    expected_group_0 = 1-args.p # default for p when varying q
-    std_error_group = math.sqrt(expected_group_0 * (1-expected_group_0) / test_samples)
-    threshold_group = 3 * std_error_group
-    assert abs(s1_ratio - expected_group_0) < threshold_group, f"Group balance {s1_ratio:.2f} doesn't match expected {expected_group_0:.2f} since it is not within threshold {threshold_group:.2f}"
-
-    """ Checking if edge probabilities are correct """
-    src_nodes, tgt_nodes = g.edges(order='eid')
-    num_edges = g.num_edges()
     
-    check_sbm_edge_probabilities(torch.stack([src_nodes, tgt_nodes]),labels,sens,args.q)
+    if args.dataset == "sbm":
+     
+        """ Checking if class and group balance are correct """
+        # Subset for test set
+        test_labels = labels[idx_test]
+        test_sens = sens[idx_test]
+        test_samples = len(idx_test)
+
+        # Group sizes
+        s0 = test_sens == 0
+        s1 = test_sens == 1
+
+        # Class counts per group
+        y1_s0 = test_labels[s0].sum()
+        y0_s0 = len(test_labels[s0]) - y1_s0
+
+        y1_s1 = test_labels[s1].sum()
+        y0_s1 = len(test_labels[s1]) - y1_s1
+
+        # Sanity checks
+        total_samples = len(test_labels)
+        total_y1 = test_labels.sum()
+        total_y0 = total_samples - total_y1
+
+        # 1. Assert class balance
+        class_1_ratio = float(total_y1) / total_samples
+        expected_class_1 = 1-args.c
+        std_error_class = math.sqrt(expected_class_1 * (1-expected_class_1) / test_samples)
+        threshold_class = 3 * std_error_class
+        assert abs(class_1_ratio - expected_class_1) < threshold_class, f"Class 1 ratio {class_1_ratio:.2f} doesn't match expected {expected_class_1:.2f}"
+
+        # 2. Assert group balance
+        s1_ratio = float(s1.sum()) / total_samples
+        expected_group_0 = 1-args.p # default for p when varying q
+        std_error_group = math.sqrt(expected_group_0 * (1-expected_group_0) / test_samples)
+        threshold_group = 3 * std_error_group
+        assert abs(s1_ratio - expected_group_0) < threshold_group, f"Group balance {s1_ratio:.2f} doesn't match expected {expected_group_0:.2f} since it is not within threshold {threshold_group:.2f}"
+
+        """ Checking if edge probabilities are correct """
+        src_nodes, tgt_nodes = g.edges(order='eid')
+        num_edges = g.num_edges()
+
+        check_sbm_edge_probabilities(torch.stack([src_nodes, tgt_nodes]),labels,sens,args.q)
 
     """ Calculating traditional fairness metrics """
     # calculate and output demographic parity and equal opportunity (original fairness metrics)
@@ -421,7 +423,10 @@ def run(args):
     
     trad_metrics = [dp_0, dp_1, eo_0, eo_1, dp, eo, acc_diff]
     
-    np.save(f'saved_arrays/trad_metrics_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', trad_metrics, allow_pickle=True)
+    if args.dataset == "sbm":
+        np.save(f'saved_arrays/trad_metrics_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', trad_metrics, allow_pickle=True)
+    else:
+        np.save(f'saved_arrays/trad_metrics_teacher_{args.seed}_{args.dataset}.npy', trad_metrics, allow_pickle=True)
     
     
     """ Calculating confusion matrices """
@@ -429,9 +434,14 @@ def run(args):
     group_0_cm = confusion_matrix(labels[idx_test][sens[idx_test] == 0], pred[idx_test][sens[idx_test] == 0])
     group_1_cm = confusion_matrix(labels[idx_test][sens[idx_test] == 1], pred[idx_test][sens[idx_test] == 1])
         
-    np.save(f'saved_arrays/overall_cm_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', overall_cm, allow_pickle=True)
-    np.save(f'saved_arrays/group_0_cm_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', group_0_cm, allow_pickle=True)
-    np.save(f'saved_arrays/group_1_cm_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', group_1_cm, allow_pickle=True)    
+    if args.dataset == "sbm":
+        np.save(f'saved_arrays/overall_cm_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', overall_cm, allow_pickle=True)
+        np.save(f'saved_arrays/group_0_cm_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', group_0_cm, allow_pickle=True)
+        np.save(f'saved_arrays/group_1_cm_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', group_1_cm, allow_pickle=True)    
+    else:
+        np.save(f'saved_arrays/overall_cm_teacher_{args.seed}_{args.dataset}.npy', overall_cm, allow_pickle=True)
+        np.save(f'saved_arrays/group_0_cm_teacher_{args.seed}_{args.dataset}.npy', group_0_cm, allow_pickle=True)
+        np.save(f'saved_arrays/group_1_cm_teacher_{args.seed}_{args.dataset}.npy', group_1_cm, allow_pickle=True)
     
     """ Calculating AUC """
     # out_np is the logits array, use softmax to get probabilities
@@ -498,8 +508,12 @@ def run(args):
     macro_roc_auc_ovr_diff = macro_roc_auc_ovr_0 - macro_roc_auc_ovr_1
 
     print(f"auc diff: {macro_roc_auc_ovr_diff}")
-    np.save(f'saved_arrays/auc_ovr_diff_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', macro_roc_auc_ovr_diff, allow_pickle=True)
-    np.save(f'saved_arrays/auc_ovr_overall_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', macro_roc_auc_ovr, allow_pickle=True)
+    if args.dataset == "sbm":
+        np.save(f'saved_arrays/auc_ovr_diff_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', macro_roc_auc_ovr_diff, allow_pickle=True)
+        np.save(f'saved_arrays/auc_ovr_overall_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', macro_roc_auc_ovr, allow_pickle=True)
+    else:
+        np.save(f'saved_arrays/auc_ovr_diff_teacher_{args.seed}_{args.dataset}.npy', macro_roc_auc_ovr_diff, allow_pickle=True)
+        np.save(f'saved_arrays/auc_ovr_overall_teacher_{args.seed}_{args.dataset}.npy', macro_roc_auc_ovr, allow_pickle=True)
 
     """ Saving loss curve and model """
     if args.save_results:
@@ -518,7 +532,11 @@ def run(args):
 
     score = score_lst
     score_str = "".join([f"{s : .4f}\t" for s in score])
-    np.save(f'saved_arrays/acc_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', float(score_str), allow_pickle=True)
+    
+    if args.dataset == "sbm":
+        np.save(f'saved_arrays/acc_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', float(score_str), allow_pickle=True)
+    else:
+        np.save(f'saved_arrays/acc_teacher_{args.seed}_{args.dataset}.npy', float(score_str), allow_pickle=True)
     
     return score_lst
 
@@ -550,7 +568,10 @@ def main():
     # for collecting aggregated results
     print("test acc: ", score_str)
         
-    np.save(f'saved_arrays/acc_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', float(score_str), allow_pickle=True)
+    if args.dataset == "sbm":
+        np.save(f'saved_arrays/acc_teacher_{args.seed}_p={args.p}_q={args.q}_c={args.c}.npy', float(score_str), allow_pickle=True)
+    else:
+        np.save(f'saved_arrays/acc_teacher_{args.seed}_{args.dataset}.npy', float(score_str), allow_pickle=True)
 
 
 if __name__ == "__main__":
