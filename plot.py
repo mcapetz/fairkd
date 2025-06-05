@@ -15,7 +15,7 @@ auc_dict_pxc = dict()
 auc_dict_qxc = dict()
 auc_dict_qxp = dict()
 
-figs_folder = "figs2"
+figs_folder = "figs_final"
 saved_arrays_folder = "saved_arrays"
 
 # load in the auc values
